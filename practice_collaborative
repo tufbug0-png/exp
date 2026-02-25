@@ -1,1 +1,726 @@
-{"metadata":{"kernelspec":{"language":"python","display_name":"Python 3","name":"python3"},"language_info":{"name":"python","version":"3.12.12","mimetype":"text/x-python","codemirror_mode":{"name":"ipython","version":3},"pygments_lexer":"ipython3","nbconvert_exporter":"python","file_extension":".py"},"kaggle":{"accelerator":"none","dataSources":[{"sourceType":"datasetVersion","sourceId":2965537,"datasetId":1818188,"databundleVersionId":3013202}],"dockerImageVersionId":31286,"isInternetEnabled":true,"language":"python","sourceType":"notebook","isGpuEnabled":false}},"nbformat_minor":4,"nbformat":4,"cells":[{"cell_type":"code","source":"# This Python 3 environment comes with many helpful analytics libraries installed\n# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python\n# For example, here's several helpful packages to load\n\nimport numpy as np # linear algebra\nimport pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)\n\n# Input data files are available in the read-only \"../input/\" directory\n# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory\n\nimport os\nfor dirname, _, filenames in os.walk('/kaggle/input'):\n    for filename in filenames:\n        print(os.path.join(dirname, filename))\n\n# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using \"Save & Run All\" \n# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session","metadata":{"_uuid":"8f2839f25d086af736a60e9eeb907d3b93b6e0e5","_cell_guid":"b1076dfc-b9ad-4769-8c92-a6c4dae69d19","trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:34:35.052277Z","iopub.execute_input":"2026-02-25T09:34:35.052770Z","iopub.status.idle":"2026-02-25T09:34:35.713521Z","shell.execute_reply.started":"2026-02-25T09:34:35.052736Z","shell.execute_reply":"2026-02-25T09:34:35.712207Z"}},"outputs":[{"name":"stdout","text":"/kaggle/input/datasets/yasserh/titanic-dataset/Titanic-Dataset.csv\n","output_type":"stream"}],"execution_count":1},{"cell_type":"code","source":"from sklearn.model_selection import train_test_split\nfrom sklearn.preprocessing import LabelEncoder\nfrom sklearn.ensemble import RandomForestClassifier\nfrom sklearn.metrics import accuracy_score\nfrom sklearn.impute import SimpleImputer\nimport tensorflow as tf\nimport time","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:34:35.715603Z","iopub.execute_input":"2026-02-25T09:34:35.716176Z","iopub.status.idle":"2026-02-25T09:35:07.378624Z","shell.execute_reply.started":"2026-02-25T09:34:35.716134Z","shell.execute_reply":"2026-02-25T09:35:07.377578Z"}},"outputs":[{"name":"stderr","text":"2026-02-25 09:34:40.155874: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered\nWARNING: All log messages before absl::InitializeLog() is called are written to STDERR\nE0000 00:00:1772012080.406420      55 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered\nE0000 00:00:1772012080.471023      55 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered\nW0000 00:00:1772012080.980606      55 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.\nW0000 00:00:1772012080.980668      55 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.\nW0000 00:00:1772012080.980672      55 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.\nW0000 00:00:1772012080.980675      55 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.\n","output_type":"stream"}],"execution_count":2},{"cell_type":"code","source":"file_path = '/kaggle/input/datasets/yasserh/titanic-dataset/Titanic-Dataset.csv' \ndf = pd.read_csv(file_path)\ndf.head(5)","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:35:07.380331Z","iopub.execute_input":"2026-02-25T09:35:07.381014Z","iopub.status.idle":"2026-02-25T09:35:07.438040Z","shell.execute_reply.started":"2026-02-25T09:35:07.380982Z","shell.execute_reply":"2026-02-25T09:35:07.437050Z"}},"outputs":[{"execution_count":3,"output_type":"execute_result","data":{"text/plain":"   PassengerId  Survived  Pclass  \\\n0            1         0       3   \n1            2         1       1   \n2            3         1       3   \n3            4         1       1   \n4            5         0       3   \n\n                                                Name     Sex   Age  SibSp  \\\n0                            Braund, Mr. Owen Harris    male  22.0      1   \n1  Cumings, Mrs. John Bradley (Florence Briggs Th...  female  38.0      1   \n2                             Heikkinen, Miss. Laina  female  26.0      0   \n3       Futrelle, Mrs. Jacques Heath (Lily May Peel)  female  35.0      1   \n4                           Allen, Mr. William Henry    male  35.0      0   \n\n   Parch            Ticket     Fare Cabin Embarked  \n0      0         A/5 21171   7.2500   NaN        S  \n1      0          PC 17599  71.2833   C85        C  \n2      0  STON/O2. 3101282   7.9250   NaN        S  \n3      0            113803  53.1000  C123        S  \n4      0            373450   8.0500   NaN        S  ","text/html":"<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>PassengerId</th>\n      <th>Survived</th>\n      <th>Pclass</th>\n      <th>Name</th>\n      <th>Sex</th>\n      <th>Age</th>\n      <th>SibSp</th>\n      <th>Parch</th>\n      <th>Ticket</th>\n      <th>Fare</th>\n      <th>Cabin</th>\n      <th>Embarked</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>1</td>\n      <td>0</td>\n      <td>3</td>\n      <td>Braund, Mr. Owen Harris</td>\n      <td>male</td>\n      <td>22.0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>A/5 21171</td>\n      <td>7.2500</td>\n      <td>NaN</td>\n      <td>S</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>2</td>\n      <td>1</td>\n      <td>1</td>\n      <td>Cumings, Mrs. John Bradley (Florence Briggs Th...</td>\n      <td>female</td>\n      <td>38.0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>PC 17599</td>\n      <td>71.2833</td>\n      <td>C85</td>\n      <td>C</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>3</td>\n      <td>1</td>\n      <td>3</td>\n      <td>Heikkinen, Miss. Laina</td>\n      <td>female</td>\n      <td>26.0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>STON/O2. 3101282</td>\n      <td>7.9250</td>\n      <td>NaN</td>\n      <td>S</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>4</td>\n      <td>1</td>\n      <td>1</td>\n      <td>Futrelle, Mrs. Jacques Heath (Lily May Peel)</td>\n      <td>female</td>\n      <td>35.0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>113803</td>\n      <td>53.1000</td>\n      <td>C123</td>\n      <td>S</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>5</td>\n      <td>0</td>\n      <td>3</td>\n      <td>Allen, Mr. William Henry</td>\n      <td>male</td>\n      <td>35.0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>373450</td>\n      <td>8.0500</td>\n      <td>NaN</td>\n      <td>S</td>\n    </tr>\n  </tbody>\n</table>\n</div>"},"metadata":{}}],"execution_count":3},{"cell_type":"code","source":"df=df.drop([\"PassengerId\",\"Name\",\"Ticket\",\"Cabin\"],axis=1)","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:35:07.439277Z","iopub.execute_input":"2026-02-25T09:35:07.439606Z","iopub.status.idle":"2026-02-25T09:35:07.449906Z","shell.execute_reply.started":"2026-02-25T09:35:07.439580Z","shell.execute_reply":"2026-02-25T09:35:07.448645Z"}},"outputs":[],"execution_count":4},{"cell_type":"code","source":"df.head(5)","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:35:07.452507Z","iopub.execute_input":"2026-02-25T09:35:07.452850Z","iopub.status.idle":"2026-02-25T09:35:07.476385Z","shell.execute_reply.started":"2026-02-25T09:35:07.452821Z","shell.execute_reply":"2026-02-25T09:35:07.475243Z"}},"outputs":[{"execution_count":5,"output_type":"execute_result","data":{"text/plain":"   Survived  Pclass     Sex   Age  SibSp  Parch     Fare Embarked\n0         0       3    male  22.0      1      0   7.2500        S\n1         1       1  female  38.0      1      0  71.2833        C\n2         1       3  female  26.0      0      0   7.9250        S\n3         1       1  female  35.0      1      0  53.1000        S\n4         0       3    male  35.0      0      0   8.0500        S","text/html":"<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>Survived</th>\n      <th>Pclass</th>\n      <th>Sex</th>\n      <th>Age</th>\n      <th>SibSp</th>\n      <th>Parch</th>\n      <th>Fare</th>\n      <th>Embarked</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>0</td>\n      <td>3</td>\n      <td>male</td>\n      <td>22.0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>7.2500</td>\n      <td>S</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>1</td>\n      <td>1</td>\n      <td>female</td>\n      <td>38.0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>71.2833</td>\n      <td>C</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>1</td>\n      <td>3</td>\n      <td>female</td>\n      <td>26.0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>7.9250</td>\n      <td>S</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>1</td>\n      <td>1</td>\n      <td>female</td>\n      <td>35.0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>53.1000</td>\n      <td>S</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>0</td>\n      <td>3</td>\n      <td>male</td>\n      <td>35.0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>8.0500</td>\n      <td>S</td>\n    </tr>\n  </tbody>\n</table>\n</div>"},"metadata":{}}],"execution_count":5},{"cell_type":"code","source":"100-(((df.notnull().sum())/len(df))*100)","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:35:07.477561Z","iopub.execute_input":"2026-02-25T09:35:07.477826Z","iopub.status.idle":"2026-02-25T09:35:07.498791Z","shell.execute_reply.started":"2026-02-25T09:35:07.477801Z","shell.execute_reply":"2026-02-25T09:35:07.497902Z"}},"outputs":[{"execution_count":6,"output_type":"execute_result","data":{"text/plain":"Survived     0.000000\nPclass       0.000000\nSex          0.000000\nAge         19.865320\nSibSp        0.000000\nParch        0.000000\nFare         0.000000\nEmbarked     0.224467\ndtype: float64"},"metadata":{}}],"execution_count":6},{"cell_type":"code","source":"si=SimpleImputer(strategy='median')\ndf[\"Age\"]=si.fit_transform(df[[\"Age\"]])\nsi=SimpleImputer(strategy='most_frequent')\ndf[\"Embarked\"]=si.fit_transform(df[[\"Embarked\"]]).ravel()","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:35:07.500012Z","iopub.execute_input":"2026-02-25T09:35:07.500384Z","iopub.status.idle":"2026-02-25T09:35:07.526886Z","shell.execute_reply.started":"2026-02-25T09:35:07.500341Z","shell.execute_reply":"2026-02-25T09:35:07.525773Z"}},"outputs":[],"execution_count":7},{"cell_type":"code","source":"100-(((df.notnull().sum())/len(df))*100)","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:35:07.528069Z","iopub.execute_input":"2026-02-25T09:35:07.528462Z","iopub.status.idle":"2026-02-25T09:35:07.540009Z","shell.execute_reply.started":"2026-02-25T09:35:07.528425Z","shell.execute_reply":"2026-02-25T09:35:07.538895Z"}},"outputs":[{"execution_count":8,"output_type":"execute_result","data":{"text/plain":"Survived    0.0\nPclass      0.0\nSex         0.0\nAge         0.0\nSibSp       0.0\nParch       0.0\nFare        0.0\nEmbarked    0.0\ndtype: float64"},"metadata":{}}],"execution_count":8},{"cell_type":"code","source":"le = LabelEncoder()\ndf[\"Sex\"] = le.fit_transform(df[\"Sex\"])\ndf[\"Embarked\"] = le.fit_transform(df[\"Embarked\"])","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:35:07.541543Z","iopub.execute_input":"2026-02-25T09:35:07.541865Z","iopub.status.idle":"2026-02-25T09:35:07.558602Z","shell.execute_reply.started":"2026-02-25T09:35:07.541833Z","shell.execute_reply":"2026-02-25T09:35:07.557395Z"}},"outputs":[],"execution_count":9},{"cell_type":"code","source":"x_train,x_test,y_train,y_test=train_test_split(df.drop(\"Survived\",axis=1),df[\"Survived\"],test_size=0.2,random_state=42)","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:35:07.560205Z","iopub.execute_input":"2026-02-25T09:35:07.560523Z","iopub.status.idle":"2026-02-25T09:35:07.580406Z","shell.execute_reply.started":"2026-02-25T09:35:07.560489Z","shell.execute_reply":"2026-02-25T09:35:07.579142Z"}},"outputs":[],"execution_count":10},{"cell_type":"code","source":"with tf.device('/CPU:0'):\n   start_time = time.time()\n\n   rf=RandomForestClassifier()\n   rf.fit(x_train,y_train)\n   pre_y=rf.predict(x_test)\n   end_time = time.time()\n   elapsed_time = end_time - start_time\nprint(f\"Runtime of the RandomForestClassifier training and prediction on CPU: {elapsed_time:.4f} seconds\")","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:35:07.581866Z","iopub.execute_input":"2026-02-25T09:35:07.582244Z","iopub.status.idle":"2026-02-25T09:35:07.819385Z","shell.execute_reply.started":"2026-02-25T09:35:07.582207Z","shell.execute_reply":"2026-02-25T09:35:07.818461Z"}},"outputs":[{"name":"stderr","text":"2026-02-25 09:35:07.588528: E external/local_xla/xla/stream_executor/cuda/cuda_platform.cc:51] failed call to cuInit: INTERNAL: CUDA error: Failed call to cuInit: UNKNOWN ERROR (303)\n","output_type":"stream"},{"name":"stdout","text":"Runtime of the RandomForestClassifier training and prediction on CPU: 0.2251 seconds\n","output_type":"stream"}],"execution_count":11},{"cell_type":"code","source":"accuracy_score(y_test,pre_y)","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-02-25T09:35:07.820530Z","iopub.execute_input":"2026-02-25T09:35:07.820870Z","iopub.status.idle":"2026-02-25T09:35:07.828745Z","shell.execute_reply.started":"2026-02-25T09:35:07.820840Z","shell.execute_reply":"2026-02-25T09:35:07.827894Z"}},"outputs":[{"execution_count":12,"output_type":"execute_result","data":{"text/plain":"0.8212290502793296"},"metadata":{}}],"execution_count":12}]}
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "ccb50be0",
+   "metadata": {
+    "_cell_guid": "b1076dfc-b9ad-4769-8c92-a6c4dae69d19",
+    "_uuid": "8f2839f25d086af736a60e9eeb907d3b93b6e0e5",
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:38:34.226925Z",
+     "iopub.status.busy": "2026-02-25T09:38:34.226560Z",
+     "iopub.status.idle": "2026-02-25T09:38:35.274640Z",
+     "shell.execute_reply": "2026-02-25T09:38:35.273433Z"
+    },
+    "papermill": {
+     "duration": 1.055624,
+     "end_time": "2026-02-25T09:38:35.276826",
+     "exception": false,
+     "start_time": "2026-02-25T09:38:34.221202",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "/kaggle/input/datasets/yasserh/titanic-dataset/Titanic-Dataset.csv\n"
+     ]
+    }
+   ],
+   "source": [
+    "# This Python 3 environment comes with many helpful analytics libraries installed\n",
+    "# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python\n",
+    "# For example, here's several helpful packages to load\n",
+    "\n",
+    "import numpy as np # linear algebra\n",
+    "import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)\n",
+    "\n",
+    "# Input data files are available in the read-only \"../input/\" directory\n",
+    "# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory\n",
+    "\n",
+    "import os\n",
+    "for dirname, _, filenames in os.walk('/kaggle/input'):\n",
+    "    for filename in filenames:\n",
+    "        print(os.path.join(dirname, filename))\n",
+    "\n",
+    "# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using \"Save & Run All\" \n",
+    "# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "d1c09d77",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:38:35.284865Z",
+     "iopub.status.busy": "2026-02-25T09:38:35.283749Z",
+     "iopub.status.idle": "2026-02-25T09:39:07.783945Z",
+     "shell.execute_reply": "2026-02-25T09:39:07.782895Z"
+    },
+    "papermill": {
+     "duration": 32.50636,
+     "end_time": "2026-02-25T09:39:07.786176",
+     "exception": false,
+     "start_time": "2026-02-25T09:38:35.279816",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2026-02-25 09:38:39.886167: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered\n",
+      "WARNING: All log messages before absl::InitializeLog() is called are written to STDERR\n",
+      "E0000 00:00:1772012320.128801      17 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered\n",
+      "E0000 00:00:1772012320.200529      17 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered\n",
+      "W0000 00:00:1772012320.760131      17 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.\n",
+      "W0000 00:00:1772012320.760176      17 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.\n",
+      "W0000 00:00:1772012320.760180      17 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.\n",
+      "W0000 00:00:1772012320.760183      17 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.\n"
+     ]
+    }
+   ],
+   "source": [
+    "from sklearn.model_selection import train_test_split\n",
+    "from sklearn.preprocessing import LabelEncoder\n",
+    "from sklearn.ensemble import RandomForestClassifier\n",
+    "from sklearn.metrics import accuracy_score\n",
+    "from sklearn.impute import SimpleImputer\n",
+    "import tensorflow as tf\n",
+    "import time"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "99d03e59",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:39:07.794235Z",
+     "iopub.status.busy": "2026-02-25T09:39:07.793618Z",
+     "iopub.status.idle": "2026-02-25T09:39:07.845890Z",
+     "shell.execute_reply": "2026-02-25T09:39:07.844935Z"
+    },
+    "papermill": {
+     "duration": 0.058486,
+     "end_time": "2026-02-25T09:39:07.847876",
+     "exception": false,
+     "start_time": "2026-02-25T09:39:07.789390",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>PassengerId</th>\n",
+       "      <th>Survived</th>\n",
+       "      <th>Pclass</th>\n",
+       "      <th>Name</th>\n",
+       "      <th>Sex</th>\n",
+       "      <th>Age</th>\n",
+       "      <th>SibSp</th>\n",
+       "      <th>Parch</th>\n",
+       "      <th>Ticket</th>\n",
+       "      <th>Fare</th>\n",
+       "      <th>Cabin</th>\n",
+       "      <th>Embarked</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>Braund, Mr. Owen Harris</td>\n",
+       "      <td>male</td>\n",
+       "      <td>22.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>A/5 21171</td>\n",
+       "      <td>7.2500</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>S</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>2</td>\n",
+       "      <td>1</td>\n",
+       "      <td>1</td>\n",
+       "      <td>Cumings, Mrs. John Bradley (Florence Briggs Th...</td>\n",
+       "      <td>female</td>\n",
+       "      <td>38.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>PC 17599</td>\n",
+       "      <td>71.2833</td>\n",
+       "      <td>C85</td>\n",
+       "      <td>C</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>3</td>\n",
+       "      <td>1</td>\n",
+       "      <td>3</td>\n",
+       "      <td>Heikkinen, Miss. Laina</td>\n",
+       "      <td>female</td>\n",
+       "      <td>26.0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>STON/O2. 3101282</td>\n",
+       "      <td>7.9250</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>S</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>4</td>\n",
+       "      <td>1</td>\n",
+       "      <td>1</td>\n",
+       "      <td>Futrelle, Mrs. Jacques Heath (Lily May Peel)</td>\n",
+       "      <td>female</td>\n",
+       "      <td>35.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>113803</td>\n",
+       "      <td>53.1000</td>\n",
+       "      <td>C123</td>\n",
+       "      <td>S</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>5</td>\n",
+       "      <td>0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>Allen, Mr. William Henry</td>\n",
+       "      <td>male</td>\n",
+       "      <td>35.0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>373450</td>\n",
+       "      <td>8.0500</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>S</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   PassengerId  Survived  Pclass  \\\n",
+       "0            1         0       3   \n",
+       "1            2         1       1   \n",
+       "2            3         1       3   \n",
+       "3            4         1       1   \n",
+       "4            5         0       3   \n",
+       "\n",
+       "                                                Name     Sex   Age  SibSp  \\\n",
+       "0                            Braund, Mr. Owen Harris    male  22.0      1   \n",
+       "1  Cumings, Mrs. John Bradley (Florence Briggs Th...  female  38.0      1   \n",
+       "2                             Heikkinen, Miss. Laina  female  26.0      0   \n",
+       "3       Futrelle, Mrs. Jacques Heath (Lily May Peel)  female  35.0      1   \n",
+       "4                           Allen, Mr. William Henry    male  35.0      0   \n",
+       "\n",
+       "   Parch            Ticket     Fare Cabin Embarked  \n",
+       "0      0         A/5 21171   7.2500   NaN        S  \n",
+       "1      0          PC 17599  71.2833   C85        C  \n",
+       "2      0  STON/O2. 3101282   7.9250   NaN        S  \n",
+       "3      0            113803  53.1000  C123        S  \n",
+       "4      0            373450   8.0500   NaN        S  "
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "file_path = '/kaggle/input/datasets/yasserh/titanic-dataset/Titanic-Dataset.csv' \n",
+    "df = pd.read_csv(file_path)\n",
+    "df.head(5)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "dc37b61e",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:39:07.855464Z",
+     "iopub.status.busy": "2026-02-25T09:39:07.855150Z",
+     "iopub.status.idle": "2026-02-25T09:39:07.865559Z",
+     "shell.execute_reply": "2026-02-25T09:39:07.864711Z"
+    },
+    "papermill": {
+     "duration": 0.0167,
+     "end_time": "2026-02-25T09:39:07.867652",
+     "exception": false,
+     "start_time": "2026-02-25T09:39:07.850952",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "df=df.drop([\"PassengerId\",\"Name\",\"Ticket\",\"Cabin\"],axis=1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "89150807",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:39:07.876444Z",
+     "iopub.status.busy": "2026-02-25T09:39:07.876123Z",
+     "iopub.status.idle": "2026-02-25T09:39:07.889196Z",
+     "shell.execute_reply": "2026-02-25T09:39:07.888416Z"
+    },
+    "papermill": {
+     "duration": 0.020258,
+     "end_time": "2026-02-25T09:39:07.890939",
+     "exception": false,
+     "start_time": "2026-02-25T09:39:07.870681",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Survived</th>\n",
+       "      <th>Pclass</th>\n",
+       "      <th>Sex</th>\n",
+       "      <th>Age</th>\n",
+       "      <th>SibSp</th>\n",
+       "      <th>Parch</th>\n",
+       "      <th>Fare</th>\n",
+       "      <th>Embarked</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>male</td>\n",
+       "      <td>22.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>7.2500</td>\n",
+       "      <td>S</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>1</td>\n",
+       "      <td>1</td>\n",
+       "      <td>female</td>\n",
+       "      <td>38.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>71.2833</td>\n",
+       "      <td>C</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>1</td>\n",
+       "      <td>3</td>\n",
+       "      <td>female</td>\n",
+       "      <td>26.0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>7.9250</td>\n",
+       "      <td>S</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>1</td>\n",
+       "      <td>1</td>\n",
+       "      <td>female</td>\n",
+       "      <td>35.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>53.1000</td>\n",
+       "      <td>S</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>male</td>\n",
+       "      <td>35.0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>8.0500</td>\n",
+       "      <td>S</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   Survived  Pclass     Sex   Age  SibSp  Parch     Fare Embarked\n",
+       "0         0       3    male  22.0      1      0   7.2500        S\n",
+       "1         1       1  female  38.0      1      0  71.2833        C\n",
+       "2         1       3  female  26.0      0      0   7.9250        S\n",
+       "3         1       1  female  35.0      1      0  53.1000        S\n",
+       "4         0       3    male  35.0      0      0   8.0500        S"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.head(5)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "c768aced",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:39:07.898851Z",
+     "iopub.status.busy": "2026-02-25T09:39:07.898422Z",
+     "iopub.status.idle": "2026-02-25T09:39:07.907535Z",
+     "shell.execute_reply": "2026-02-25T09:39:07.906639Z"
+    },
+    "papermill": {
+     "duration": 0.015316,
+     "end_time": "2026-02-25T09:39:07.909469",
+     "exception": false,
+     "start_time": "2026-02-25T09:39:07.894153",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Survived     0.000000\n",
+       "Pclass       0.000000\n",
+       "Sex          0.000000\n",
+       "Age         19.865320\n",
+       "SibSp        0.000000\n",
+       "Parch        0.000000\n",
+       "Fare         0.000000\n",
+       "Embarked     0.224467\n",
+       "dtype: float64"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "100-(((df.notnull().sum())/len(df))*100)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "8322b8de",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:39:07.918372Z",
+     "iopub.status.busy": "2026-02-25T09:39:07.917418Z",
+     "iopub.status.idle": "2026-02-25T09:39:07.934331Z",
+     "shell.execute_reply": "2026-02-25T09:39:07.933273Z"
+    },
+    "papermill": {
+     "duration": 0.023581,
+     "end_time": "2026-02-25T09:39:07.936451",
+     "exception": false,
+     "start_time": "2026-02-25T09:39:07.912870",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "si=SimpleImputer(strategy='median')\n",
+    "df[\"Age\"]=si.fit_transform(df[[\"Age\"]])\n",
+    "si=SimpleImputer(strategy='most_frequent')\n",
+    "df[\"Embarked\"]=si.fit_transform(df[[\"Embarked\"]]).ravel()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "e875becc",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:39:07.944673Z",
+     "iopub.status.busy": "2026-02-25T09:39:07.944310Z",
+     "iopub.status.idle": "2026-02-25T09:39:07.953314Z",
+     "shell.execute_reply": "2026-02-25T09:39:07.952410Z"
+    },
+    "papermill": {
+     "duration": 0.015373,
+     "end_time": "2026-02-25T09:39:07.955236",
+     "exception": false,
+     "start_time": "2026-02-25T09:39:07.939863",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Survived    0.0\n",
+       "Pclass      0.0\n",
+       "Sex         0.0\n",
+       "Age         0.0\n",
+       "SibSp       0.0\n",
+       "Parch       0.0\n",
+       "Fare        0.0\n",
+       "Embarked    0.0\n",
+       "dtype: float64"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "100-(((df.notnull().sum())/len(df))*100)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "3d029db5",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:39:07.964592Z",
+     "iopub.status.busy": "2026-02-25T09:39:07.963623Z",
+     "iopub.status.idle": "2026-02-25T09:39:07.970181Z",
+     "shell.execute_reply": "2026-02-25T09:39:07.969230Z"
+    },
+    "papermill": {
+     "duration": 0.013498,
+     "end_time": "2026-02-25T09:39:07.972092",
+     "exception": false,
+     "start_time": "2026-02-25T09:39:07.958594",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "le = LabelEncoder()\n",
+    "df[\"Sex\"] = le.fit_transform(df[\"Sex\"])\n",
+    "df[\"Embarked\"] = le.fit_transform(df[\"Embarked\"])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "e7a391c5",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:39:07.980700Z",
+     "iopub.status.busy": "2026-02-25T09:39:07.980251Z",
+     "iopub.status.idle": "2026-02-25T09:39:07.989394Z",
+     "shell.execute_reply": "2026-02-25T09:39:07.988238Z"
+    },
+    "papermill": {
+     "duration": 0.016105,
+     "end_time": "2026-02-25T09:39:07.991586",
+     "exception": false,
+     "start_time": "2026-02-25T09:39:07.975481",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "x_train,x_test,y_train,y_test=train_test_split(df.drop(\"Survived\",axis=1),df[\"Survived\"],test_size=0.2,random_state=42)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "8bc01ff0",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:39:08.000574Z",
+     "iopub.status.busy": "2026-02-25T09:39:07.999715Z",
+     "iopub.status.idle": "2026-02-25T09:39:08.225766Z",
+     "shell.execute_reply": "2026-02-25T09:39:08.224630Z"
+    },
+    "papermill": {
+     "duration": 0.232819,
+     "end_time": "2026-02-25T09:39:08.227784",
+     "exception": false,
+     "start_time": "2026-02-25T09:39:07.994965",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Runtime of the RandomForestClassifier training and prediction on CPU: 0.2158 seconds\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2026-02-25 09:39:08.004090: E external/local_xla/xla/stream_executor/cuda/cuda_platform.cc:51] failed call to cuInit: INTERNAL: CUDA error: Failed call to cuInit: UNKNOWN ERROR (303)\n"
+     ]
+    }
+   ],
+   "source": [
+    "with tf.device('/CPU:0'):\n",
+    "   start_time = time.time()\n",
+    "   rf=RandomForestClassifier()\n",
+    "   rf.fit(x_train,y_train)\n",
+    "   pre_y=rf.predict(x_test)\n",
+    "   end_time = time.time()\n",
+    "   elapsed_time = end_time - start_time\n",
+    "print(f\"Runtime of the RandomForestClassifier training and prediction on CPU: {elapsed_time:.4f} seconds\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "2488bfda",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-02-25T09:39:08.236847Z",
+     "iopub.status.busy": "2026-02-25T09:39:08.236081Z",
+     "iopub.status.idle": "2026-02-25T09:39:08.243403Z",
+     "shell.execute_reply": "2026-02-25T09:39:08.242459Z"
+    },
+    "papermill": {
+     "duration": 0.014003,
+     "end_time": "2026-02-25T09:39:08.245269",
+     "exception": false,
+     "start_time": "2026-02-25T09:39:08.231266",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.8044692737430168"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "accuracy_score(y_test,pre_y)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [
+    {
+     "databundleVersionId": 3013202,
+     "datasetId": 1818188,
+     "sourceId": 2965537,
+     "sourceType": "datasetVersion"
+    }
+   ],
+   "dockerImageVersionId": 31286,
+   "isGpuEnabled": false,
+   "isInternetEnabled": true,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.12"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 40.548198,
+   "end_time": "2026-02-25T09:39:11.307831",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2026-02-25T09:38:30.759633",
+   "version": "2.6.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
